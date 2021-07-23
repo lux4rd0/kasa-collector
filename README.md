@@ -66,7 +66,7 @@ An example docker run command may also be used:
           -e KASA_COLLECTOR_INFLUXDB_USERNAME: none \
           -e TZ=America/Chicago \
           --restart always \
-          lux4rd0/sense-collector:latest
+          lux4rd0/kasa-collector:latest
 
 Be sure to change your Timezone and list of Kasa devices.
 
@@ -91,7 +91,7 @@ Outputs additional logging. Defaults to false.
 
 `KASA_COLLECTOR_DEBUG_CURL` - OPTIONAL
 
-Outputs additional logging specific to the curl commands to collect data from Sense and persist data to InfluxDB. Defaults to false.
+Outputs additional logging specific to the curl commands to persist data to InfluxDB. Defaults to false.
 
 - true
 - false
@@ -113,7 +113,7 @@ The password to your InfluxDB database instance.
 
 `KASA_COLLECTOR_INFLUXDB_URL` - REQUIRED
 
-The URL is required to persist data to InfluxDB. An example would be: `http://influxdb:8086/write?db=sense`
+The URL is required to persist data to InfluxDB. An example would be: `http://influxdb:8086/write?db=kasa`
 
 `KASA_COLLECTOR_INFLUXDB_USERNAME` - REQUIRED
 
@@ -150,9 +150,8 @@ Each dashboard has dropdowns at the top that provide for filtering of measuremen
 
 <center><img src="./images/KASA_COLLECTOR-screen_shot-collector_info.jpg"></center>
 
-**Collector Info**:  Provides observability into how the Sense Collector functions alongside metrics related to the host's performance. This dashboard helps understand the performance of the main collector functions to assist with troubleshooting.
+**Collector Info**:  Provides observability into how the Kasa Collector functions alongside metrics related to the host's performance. This dashboard helps understand the performance of the main collector functions to assist with troubleshooting.
 
-**Epoch Time Difference**: Helps determine if your hosts can keep up with processing messages from the Sense monitor. It provides the difference between the host time and the epoch time received in the Sense monitor data. Negative numbers mean the Sense monitor is ahead of the hosts. Positive numbers mean the host is behind the Sense monitor. If the drift trends to the positive, it may also mean that there's just time clock drift. Ensure you keep an eye on the NTP time sync on both your host and Sense if there's a large discrepancy.
 
 **CPU, Load Average, Memory Utilization**:  These panels show host-level details and are not specific to the performance of the docker container. Per Process CPU Usage, Netstat, and Processes are particular to the container.
 
