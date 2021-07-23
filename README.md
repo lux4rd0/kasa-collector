@@ -27,7 +27,7 @@ This project currently supports collecting data from the Kasa [KP115](https://ww
 
 ## TPLink Smartplug Open Source Project
 
-The underlying Python script that Kasa Collector uses comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
+The underlying Python script that is called by Kasa Collector comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
 
 ## Deploying Kasa Collector
 
@@ -75,11 +75,11 @@ Running `docker-compose up -d' or the `docker-run` command will download and sta
 
 ## Environmental Flags:
 
-Kasa Collector may be configured with additional environment flags to control its behaviors. They are described below:
+Kasa Collector may be configured with additional environment flags to control it's behaviors. They are described below:
 
 `KASA_COLLECTOR_COLLECT_INTERVAL` - OPTIONAL
 
-How frequently the Collector polls your devices to collect measurements in seconds. Defaults to 1 (second) if left empty.
+How frequently the Collector polls your devices to collect measurements in seconds. Defaults to 1 (second) if it's not set.
 
 - integer (in seconds)
 
@@ -92,7 +92,7 @@ Outputs additional logging. Defaults to false.
 
 `KASA_COLLECTOR_DEBUG_CURL` - OPTIONAL
 
-Outputs additional logging specific to the curl command to persist data to InfluxDB. Defaults to false.
+Outputs additional logging specific to the curl commands to persist data to InfluxDB. Defaults to false.
 
 - true
 - false
@@ -124,7 +124,7 @@ The username to your InfluxDB database instance.
 
 #### kasa-collector
 
-Kasa Collector is the primary data collector and is responsible for gathering details on the following:
+Kasa Collector is the primary data collector and is responsible for gathering details per Kasa device for the following:
 
 * Current (milliamps)
 * Voltage (millivolts)
@@ -149,12 +149,9 @@ Each dashboard has dropdowns at the top that provide for filtering of measuremen
 
 ### Kasa Collector - [14734](https://grafana.com/grafana/dashboards/14734)
 
-<center><img src="./images/KASA_COLLECTOR-screen_shot-collector_info.jpg"></center>
+<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa-collector_energy.jpg"></center>
 
-**Collector Info**:  Provides observability into how the Kasa Collector functions alongside metrics related to the host's performance. This dashboard helps understand the performance of the main collector functions to assist with troubleshooting.
-
-
-**CPU, Load Average, Memory Utilization**:  These panels show host-level details and are not specific to the performance of the docker container. Per Process CPU Usage, Netstat, and Processes are particular to the container.
+The Energy dashboard provides panels representing Power, Watt-Hours, Current, and Voltage. Measurements are represented at the top for total combined information (and voltage average) and rows for both devices and plugs (as part of power strips). You can use the device and plug dropdown menus at the top of the dashboard to filter on each. If you choose a single device that happens to be a power strip, only the plugs for that power strip will be shown in the Plugs dropdown.
 
 ## Troubleshooting
 
@@ -164,7 +161,7 @@ Sometimes you'll see the following error message from the Kasa Collector:
 
     kasa_request_info: malformed JSON, retrying
 
-This error is because some of the devices that respond to the Collector will provide malformed data. The Collector will try again until it eventually gets a good response.
+This is because some of the devices respond to the collector will malformed data. The collector will try again until it eventually gets a good response.
 
 ## Roadmap
 
