@@ -1,6 +1,7 @@
 
 
 
+
 ## About The Project
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector_header.png"></center>
@@ -26,7 +27,7 @@ This project currently supports collecting data from the Kasa [KP115](https://ww
 
 ## TPLink Smartplug Open Source Project
 
-The underlying Python script that is called by Kasa Collector comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
+The underlying Python script that Kasa Collector uses comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
 
 ## Deploying Kasa Collector
 
@@ -58,12 +59,12 @@ An example docker run command may also be used:
 
     docker run -d \
           --name=kasa-collector \
-          -e KASA_COLLECTOR_COLLECT_INTERVAL: 5 \
-          -e KASA_COLLECTOR_DEVICE_HOST: kasa-device01.lux4rd0.com,kasa-device02.lux4rd0.com \
-          -e KASA_COLLECTOR_HOST_HOSTNAME: kasa-collector.lux4rd0.com \
-          -e KASA_COLLECTOR_INFLUXDB_PASSWORD: none \
-          -e KASA_COLLECTOR_INFLUXDB_URL: http://influxdb01.lux4rd0.com:8086/write?db=kasa \
-          -e KASA_COLLECTOR_INFLUXDB_USERNAME: none \
+          -e KASA_COLLECTOR_COLLECT_INTERVAL=5 \
+          -e KASA_COLLECTOR_DEVICE_HOST=kasa-device01.lux4rd0.com,kasa-device02.lux4rd0.com \
+          -e KASA_COLLECTOR_HOST_HOSTNAME=kasa-collector.lux4rd0.com \
+          -e KASA_COLLECTOR_INFLUXDB_PASSWORD=none \
+          -e KASA_COLLECTOR_INFLUXDB_URL=http://influxdb01.lux4rd0.com:8086/write?db=kasa \
+          -e KASA_COLLECTOR_INFLUXDB_USERNAME=none \
           -e TZ=America/Chicago \
           --restart always \
           lux4rd0/kasa-collector:latest
@@ -74,11 +75,11 @@ Running `docker-compose up -d' or the `docker-run` command will download and sta
 
 ## Environmental Flags:
 
-Kasa Collector may be configured with additional environment flags to control it's behaviors. They are described below:
+Kasa Collector may be configured with additional environment flags to control its behaviors. They are described below:
 
 `KASA_COLLECTOR_COLLECT_INTERVAL` - OPTIONAL
 
-How frequently the Collector polls your devices to collect measurements in seconds. Defaults to 1 (second) if it's not set.
+How frequently the Collector polls your devices to collect measurements in seconds. Defaults to 1 (second) if left empty.
 
 - integer (in seconds)
 
@@ -91,7 +92,7 @@ Outputs additional logging. Defaults to false.
 
 `KASA_COLLECTOR_DEBUG_CURL` - OPTIONAL
 
-Outputs additional logging specific to the curl commands to persist data to InfluxDB. Defaults to false.
+Outputs additional logging specific to the curl command to persist data to InfluxDB. Defaults to false.
 
 - true
 - false
@@ -155,7 +156,15 @@ Each dashboard has dropdowns at the top that provide for filtering of measuremen
 
 **CPU, Load Average, Memory Utilization**:  These panels show host-level details and are not specific to the performance of the docker container. Per Process CPU Usage, Netstat, and Processes are particular to the container.
 
+## Troubleshooting
 
+**Error Messages**
+
+Sometimes you'll see the following error message from the Kasa Collector:
+
+    kasa_request_info: malformed JSON, retrying
+
+This error is because some of the devices that respond to the Collector will provide malformed data. The Collector will try again until it eventually gets a good response.
 
 ## Roadmap
 
