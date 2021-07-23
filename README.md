@@ -147,7 +147,7 @@ Each dashboard has dropdowns at the top that provide for filtering of measuremen
 
 **Dashboard Refresh**: Each of the dashboards are set to refresh every sixty seconds. The refresh can be changed or disabled altogether.
 
-### Kasa Collector - [14734](https://grafana.com/grafana/dashboards/14734)
+### Kasa Collector - [14762](https://grafana.com/grafana/dashboards/14762)
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa-collector_energy.jpg"></center>
 
