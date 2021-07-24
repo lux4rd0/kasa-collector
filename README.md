@@ -33,7 +33,7 @@ The underlying Python script that is used to communicate with the Kasa devices b
 
 Use the following [Docker container](https://hub.docker.com/r/lux4rd0/kasa-collector):
 
-    lux4rd0/kasa-collector:1.0.0
+    lux4rd0/kasa-collector:1.0.1
     lux4rd0/kasa-collector:latest
     
 Kasa Collector requires environmental variables for the container to function. It mainly needs to have details on your InfluxDB instance (URL, username, and password) and the list of Kasa devices you'd like for it to poll.
