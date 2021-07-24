@@ -71,7 +71,7 @@ Or use this example docker run command:
 
 Be sure to change your the InfluxDB details, timezone, and list of Kasa devices in the environmental variables.
 
-Running `docker-compose up -d' or the `docker-run` command will download and start up the kasa-collector container. 
+Running `docker-compose up -d` or the `docker-run` command will download and start up the kasa-collector container. 
 
 ## Environmental Flags:
 
