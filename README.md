@@ -27,7 +27,7 @@ This project currently supports collecting data from the Kasa [KP115](https://ww
 
 ## TPLink Smartplug Open Source Project
 
-The underlying Python script that is called by Kasa Collector comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
+The underlying Python script that is used to communicate with the Kasa devices by the Kasa Collector comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed engineered getting access to the local devices is available.
 
 ## Deploying Kasa Collector
 
