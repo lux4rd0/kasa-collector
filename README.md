@@ -6,7 +6,7 @@
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector_header.png"></center>
 
-**Kasa Collector** is a set of scripts deployed with Docker that provide a way of collecting data from the [Kasa](https://www.kasasmart.com/us/products/smart-plugs) Smart Plugs. Once deployed, you can use Grafana dashboards to start visualizing that data.
+**Kasa Collector** is a set of scripts deployed with Docker that provide a way of collecting data from [Kasa](https://www.kasasmart.com/us/products/smart-plugs) Smart Plugs. Once deployed, you can use Grafana dashboards to start visualizing that data.
 
 A live set of dashboards using this Collector [are available](https://labs.lux4rd0.com/kasa-collector/) for you to try out.
 
