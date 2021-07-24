@@ -165,7 +165,7 @@ Sometimes you'll see the following error message from the Kasa Collector:
 
     kasa_request_info: malformed JSON, retrying
 
-This is because some of the devices respond to the collector will malformed data. The collector will try again until it eventually gets a good response.
+This is because some of the devices respond to the collector might be malformed data. The collector will try again until it receives a good response.
 
 ## Roadmap
 
