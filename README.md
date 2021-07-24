@@ -104,6 +104,10 @@ Outputs additional logging specific to when the Collector is sleeping between po
 - true
 - false
 
+`KASA_COLLECTOR_DEVICE_HOST` - REQUIRED
+
+The hostname of your supported Kasa devices. If you have more than one, list them separated by a comma.
+
 `KASA_COLLECTOR_HOST_HOSTNAME` - OPTIONAL
 
 This value represents the hostname that is running the Docker container. Docker creates a unique hostname each time a docker container is recycled. This entry is used in the Collector Info dashboard to know where the Collector is running.
