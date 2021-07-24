@@ -38,7 +38,7 @@ Use the following [Docker container](https://hub.docker.com/r/lux4rd0/kasa-colle
     
 Kasa Collector requires environmental variables for the container to function. It mainly needs to have details on your InfluxDB instance (URL, username, and password) and the list of Kasa devices you'd like for it to poll.
 
-You can run start the container with something simliar to the example docker-compose.yml file:
+You can start the container with something simliar to the example docker-compose.yml file:
 
     services:
       kasa-collector:
@@ -55,7 +55,7 @@ You can run start the container with something simliar to the example docker-com
         restart: always
     version: '3.3'
 
-An example docker run command may also be used:
+Or use this example docker run command:
 
     docker run -d \
           --name=kasa-collector \
@@ -69,7 +69,7 @@ An example docker run command may also be used:
           --restart always \
           lux4rd0/kasa-collector:latest
 
-Be sure to change your Timezone and list of Kasa devices.
+Be sure to change your the InfluxDB details, timezone, and list of Kasa devices in the environmental variables.
 
 Running `docker-compose up -d' or the `docker-run` command will download and start up the kasa-collector container. 
 
