@@ -1,7 +1,3 @@
-
-
-
-
 ## About The Project
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector_header.png"></center>
@@ -151,9 +147,13 @@ Each dashboard has dropdowns at the top that provide for filtering of measuremen
 
 **Dashboard Refresh**: Each of the dashboards are set to refresh every sixty seconds. The refresh can be changed or disabled altogether.
 
-### Kasa Collector - [14734](https://grafana.com/grafana/dashboards/14734)
+### Kasa Collector - [14762](https://grafana.com/grafana/dashboards/14762)
 
-<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa-collector_energy.jpg"></center>
+<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector-energy_by_measurement.jpg"></center>
+
+### Kasa Collector - [14772](https://grafana.com/grafana/dashboards/14772)
+
+<center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector-energy_by_device.jpg"></center>
 
 The Energy dashboard provides panels representing Power, Watt-Hours, Current, and Voltage. Measurements are represented at the top for total combined information (and voltage average) and rows for both devices and plugs (as part of power strips). You can use the device and plug dropdown menus at the top of the dashboard to filter on each. If you choose a single device that happens to be a power strip, only the plugs for that power strip will be shown in the Plugs dropdown.
 
