@@ -1,14 +1,15 @@
+
 ## About The Project
 
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector_header.png"></center>
 
-**Kasa Collector** is a set of scripts deployed with Docker that collects data from [Kasa](https://www.kasasmart.com/us/products/smart-plugs) Smart Plugs. Once deployed, you can use Grafana dashboards to visualize that data.
+**Kasa Collector** is a set of scripts deployed with Docker that collects data from [Kasa](https://www.kasasmart.com/us/products/smart-plugs) Smart Plugs. Once deployed, you can visualize that data using Grafana dashboards.
 
 A live set of dashboards using this Collector [are available](https://labs.lux4rd0.com/kasa-collector/) for you to try out.
 
 ## Getting Started
 
-The project builds a pre-configured Docker container that takes different configurations based on how often you wish to poll your Kasa devices.
+The project uses a Docker container that may be configured to accept different settings for how often you wish to poll your Kasa devices.
 
 ## Prerequisites
 
@@ -19,11 +20,11 @@ The project builds a pre-configured Docker container that takes different config
 
 ## Supported Kasa Smart Plugs
 
-This project currently supports collecting data from the Kasa [KP115](https://www.kasasmart.com/us/products/smart-plugs/kasa-smart-plug-slim-energy-monitoring-kp115) smart plug device and Kasa [HS300](https://www.kasasmart.com/us/products/smart-plugs/kasa-smart-wi-fi-power-strip-hs300) power strip.
+This project currently supports collecting data from the Kasa [KP115](https://www.kasasmart.com/us/products/smart-plugs/kasa-smart-plug-slim-energy-monitoring-kp115) smart plug device and Kasa [HS300](https://www.kasasmart.com/us/products/smart-plugs/kasa-smart-wi-fi-power-strip-hs300) power strip. These are the two devices that I have - others may be supported based on the "energy" tag found during device disovery.
 
 ## TPLink Smartplug Open Source Project
 
-The underlying Python script used to communicate with the Kasa devices by the Kasa Collector comes from the softScheck [tplink-smartplug](https://github.com/softScheck/tplink-smartplug) project. An [overview](https://www.softscheck.com/en/reverse-engineering-tp-link-hs110/) on how they reversed-engineered getting access to the local devices is available.
+This project uses the python-kasa module to discover and connect to Kasa devices. More details on supported devices may be found on their [project site](https://github.com/python-kasa/python-kasa).
 
 ## Deploying Kasa Collector
 
@@ -34,46 +35,25 @@ lux4rd0/kasa-collector:2.0.06
 lux4rd0/kasa-collector:latest
 ```
 
-Kasa Collector requires environmental variables for the container to function. It mainly needs details on your InfluxDB instance (URL, username, and password) and the list of Kasa devices you'd like it to poll.
+Kasa Collector requires some environmental variables for the container to function. It mainly needs details on your InfluxDB instance (Bucket, Org, Token, and URL).
 
 You can start the container with something similar to the example `docker-compose.yaml` file:
 
 ```yaml
-version: '3.8'
-
 name: kasa-collector
 
 services:
   kasa-collector:
     container_name: kasa-collector
     environment:
-      KASA_COLLECTOR_DATA_FETCH_INTERVAL: "15"
-      KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL: "300"
-      KASA_COLLECTOR_DISCOVERY_PACKETS: "3"
-      KASA_COLLECTOR_DISCOVERY_TIMEOUT: "5"
-      KASA_COLLECTOR_FETCH_MAX_RETRIES: "3"
-      KASA_COLLECTOR_FETCH_RETRY_DELAY: "1"
       KASA_COLLECTOR_INFLUXDB_BUCKET: kasa
-      KASA_COLLECTOR_INFLUXDB_ORG: Tylephony
-      KASA_COLLECTOR_INFLUXDB_TOKEN: qB7XT9fVnqNly9AZiUffFYZDGFiwLyPL6IHqhSphAPBE24PpDBPCMw71u8NpeCf3If1ktn4RzFFlgVoFNOfpgw==
-      KASA_COLLECTOR_INFLUXDB_URL: http://influxdb02.tylephony.com:8086
-      KASA_COLLECTOR_KEEP_MISSING_DEVICES: "False"
-      KASA_COLLECTOR_OUTPUT_DIR: output
-      KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL: "60"
-      KASA_COLLECTOR_WRITE_TO_FILE: "True"
+      KASA_COLLECTOR_INFLUXDB_ORG: Lux4rd0
+      KASA_COLLECTOR_INFLUXDB_TOKEN: TOKEN
+      KASA_COLLECTOR_INFLUXDB_URL: http://influxdb.lux4rd0.com:8086
       TZ: America/Chicago
-      KASA_COLLECTOR_LOG_LEVEL_KASA_API: "DEBUG"
-      KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE: "DEBUG"
-      KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR: "DEBUG"
-    image: docker.tylephony.com:5000/lux4rd0/kasa-collector:2.0.5
+    image: lux4rd0/kasa-collector:latest
     network_mode: host
     restart: always
-    volumes:
-      - type: bind
-        source: /mnt/docker/kasa-collector/output
-        target: /app/kasa_collector/output
-        bind:
-          create_host_path: true
 ```
 
 Or use this example docker run command:
@@ -81,31 +61,17 @@ Or use this example docker run command:
 ```bash
 docker run -d \
       --name=kasa-collector \
-      -e KASA_COLLECTOR_DATA_FETCH_INTERVAL=15 \
-      -e KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL=300 \
-      -e KASA_COLLECTOR_DISCOVERY_PACKETS=3 \
-      -e KASA_COLLECTOR_DISCOVERY_TIMEOUT=5 \
-      -e KASA_COLLECTOR_FETCH_MAX_RETRIES=3 \
-      -e KASA_COLLECTOR_FETCH_RETRY_DELAY=1 \
       -e KASA_COLLECTOR_INFLUXDB_BUCKET=kasa \
-      -e KASA_COLLECTOR_INFLUXDB_ORG=Tylephony \
-      -e KASA_COLLECTOR_INFLUXDB_TOKEN=qB7XT9fVnqNly9AZiUffFYZDGFiwLyPL6IHqhSphAPBE24PpDBPCMw71u8NpeCf3If1ktn4RzFFlgVoFNOfpgw== \
-      -e KASA_COLLECTOR_INFLUXDB_URL=http://influxdb02.tylephony.com:8086 \
-      -e KASA_COLLECTOR_KEEP_MISSING_DEVICES=False \
-      -e KASA_COLLECTOR_OUTPUT_DIR=output \
-      -e KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL=60 \
-      -e KASA_COLLECTOR_WRITE_TO_FILE=True \
+      -e KASA_COLLECTOR_INFLUXDB_ORG=Lux4rd0 \
+      -e KASA_COLLECTOR_INFLUXDB_TOKEN=TOKEN \
+      -e KASA_COLLECTOR_INFLUXDB_URL=http://influxdb.lux4rd0.com:8086 \
       -e TZ=America/Chicago \
-      -e KASA_COLLECTOR_LOG_LEVEL_KASA_API=DEBUG \
-      -e KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE=DEBUG \
-      -e KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR=DEBUG \
       --restart always \
       --network host \
-      -v /mnt/docker/kasa-collector/output:/app/kasa_collector/output \
-      docker.tylephony.com:5000/lux4rd0/kasa-collector:2.0.5
+      lux4rd0/kasa-collector:latest
 ```
 
-Be sure to change your InfluxDB details, timezone, and list of Kasa devices in the environmental variables.
+Be sure to change your InfluxDB details and timezone in the environmental variables.
 
 Running `docker-compose up -d` or the `docker run` command will download and start up the kasa-collector container. 
 
@@ -236,11 +202,11 @@ Collecting data is only half the fun. Now it's time to provision some Grafana Da
 
 ### In General:
 
-Each dashboard has dropdowns at the top that allow you to filter measurements based on devices and plugs. The dropdowns default to "All," but you can certainly select and save preferences.
+Each dashboard has dropdowns at the top that allow you to filter measurements based on devices and plugs. The dropdowns default to "All," but you can select and save preferences.
 
-**Interval**:  A dropdown that provides different smoothing levels helps manage how the graphs look based on the interval of data being collected by the Kasa Collector. Think of this as a level of "smoothing" based on your chosen time frame and the polling time you're collecting data. Be sure to set these to a time frame higher than your poll rate.
+**Interval**:  A dropdown that provides different smoothing levels helps manage how the graphs look based on the interval of data collected by the Kasa Collector. Think of this as a level of "smoothing" based on your chosen time frame and the polling time you're collecting data. Be sure to set these to a time frame higher than your poll rate.
 
-**Time Range**: This defaults to "Today so far" but can be updated to any other Relative or Absolute time range. Change the "Interval" dropdown for longer time ranges if you want to smooth out any of the data.
+**Time Range**: This defaults to "Today so far" but can be updated to any other Relative or Absolute time range. Change the "Interval" dropdown for longer time ranges to smooth out any data.
 
 **Dashboard Refresh**: Each dashboard is set to refresh every sixty seconds, but this can be changed or disabled.
 
