@@ -171,9 +171,7 @@ Log level for InfluxDB Storage. Defaults to "INFO".
 - ERROR
 - CRITICAL
 
-`KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECT
-
-OR` - OPTIONAL
+`KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR` - OPTIONAL
 
 Log level for Kasa Collector. Defaults to "INFO".
 
