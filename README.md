@@ -204,7 +204,7 @@ Each dashboard has dropdowns at the top that allow you to filter measurements ba
 
 **Interval**:  A dropdown that provides different smoothing levels helps manage how the graphs look based on the interval of data collected by the Kasa Collector. Think of this as a level of "smoothing" based on your chosen time frame and the polling time you're collecting data. Be sure to set these to a time frame higher than your poll rate.
 
-**Time Range**: This defaults to "Today so far" but can be updated to any other Relative or Absolute time range. Change the "Interval" dropdown for longer time ranges to smooth out any data.
+**Time Range**: This defaults to "Today so far" but can be updated to any other Relative or Absolute time range. To smooth out any data, change the "Interval" dropdown for longer time ranges.
 
 **Dashboard Refresh**: Each dashboard is set to refresh every sixty seconds, but this can be changed or disabled.
 
@@ -217,6 +217,25 @@ Each dashboard has dropdowns at the top that allow you to filter measurements ba
 <center><img src="https://labs.lux4rd0.com/wp-content/uploads/2021/07/kasa_collector-energy_by_device.jpg"></center>
 
 The Energy dashboard provides panels representing Power, Watt-Hours, Current, and Voltage. Measurements are at the top for total combined information (and voltage average) and rows for both devices and plugs (as part of power strips). You can use the device and plug dropdown menus at the top of the dashboard to filter on each. If you choose a single device that happens to be a power strip, only the plugs for that power strip will be shown in the Plugs dropdown.
+
+## Grafana Datasource
+
+This collector uses InfluxQL, and for the dashboards to function, you need to create a data source in Grafana using the credentials you set in InfluxDB V2. More details can be found on the InfluxDB V2 Web site:
+
+https://docs.influxdata.com/influxdb/v2/tools/grafana/?t=InfluxQL#configure-your-influxdb-connection
+
+The biggest change here is:
+
+ - Configure InfluxDB authentication:
+   
+   **Token authentication**
+   Under **Custom HTTP Headers**, select **Add Header**. Provide your InfluxDB API token:
+   
+   **Header**: Enter `Authorization`
+   
+   **Value**: Use the `Token` schema and provide your InfluxDB API token. For example:
+   
+       Token y0uR5uP3rSecr3tT0k3n
 
 ## Troubleshooting
 
