@@ -28,7 +28,7 @@ class Config:
     KASA_COLLECTOR_TPLINK_PASSWORD = os.getenv("KASA_COLLECTOR_TPLINK_PASSWORD", "")
 
     # An array of device IPs to connect to.
-    KASA_COLLECTOR_DEVICE_HOSTS = os.getenv("KASA_COLLECTOR_DEVICE_HOST", "")
+    KASA_COLLECTOR_DEVICE_HOSTS = os.getenv("KASA_COLLECTOR_DEVICE_HOSTS", "")
 
     # Maximum number of retries for fetching data from devices. Default is 5.
     KASA_COLLECTOR_FETCH_MAX_RETRIES = int(
