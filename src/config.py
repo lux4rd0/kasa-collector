@@ -11,6 +11,25 @@ class Config:
     # Directory where output files will be saved. Default is "output".
     KASA_COLLECTOR_OUTPUT_DIR = os.getenv("KASA_COLLECTOR_OUTPUT_DIR", "output")
 
+    # Enable device discovery or fall-back to host list.
+    KASA_COLLECTOR_DEVICE_DISCOVERY = (
+        os.getenv("KASA_COLLECTOR_DEVICE_DISCOVERY", "True").lower() == "true"
+    )
+
+    # Enable use of credentials when querying hosts (certain Kasa products require this).
+    KASA_COLLECTOR_USE_CREDENTIALS = (
+        os.getenv("KASA_COLLECTOR_USE_CREDENTIALS", "False").lower() == "true"
+    )
+
+    # The TP-LINK (Kasa) Cloud Account username.
+    KASA_COLLECTOR_TPLINK_USERNAME = os.getenv("KASA_COLLECTOR_TPLINK_USERNAME", "")
+
+    # The TP-LINK (Kasa) Cloud Account password.
+    KASA_COLLECTOR_TPLINK_PASSWORD = os.getenv("KASA_COLLECTOR_TPLINK_PASSWORD", "")
+
+    # An array of device IPs to connect to.
+    KASA_COLLECTOR_DEVICE_HOSTS = os.getenv("KASA_COLLECTOR_DEVICE_HOST", "")
+
     # Maximum number of retries for fetching data from devices. Default is 5.
     KASA_COLLECTOR_FETCH_MAX_RETRIES = int(
         os.getenv("KASA_COLLECTOR_FETCH_MAX_RETRIES", "5")

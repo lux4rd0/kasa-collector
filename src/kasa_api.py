@@ -1,4 +1,5 @@
 import asyncio
+import re
 from kasa import Discover, SmartStrip
 import socket
 import logging
@@ -23,9 +24,33 @@ class KasaAPI:
         """
         discovery_timeout = Config.KASA_COLLECTOR_DISCOVERY_TIMEOUT
         discovery_packets = Config.KASA_COLLECTOR_DISCOVERY_PACKETS
-        devices = await Discover.discover(
-            discovery_timeout=discovery_timeout, discovery_packets=discovery_packets
-        )
+        hosts = re.split(r',\s*', Config.KASA_COLLECTOR_DEVICE_HOSTS.strip())
+        username = Config.KASA_COLLECTOR_TPLINK_USERNAME
+        password = Config.KASA_COLLECTOR_TPLINK_PASSWORD
+
+        if Config.KASA_COLLECTOR_USE_CREDENTIALS:
+            if Config.KASA_COLLECTOR_DEVICE_DISCOVERY:
+                devices = await Discover.discover(
+                    discovery_timeout=discovery_timeout, discovery_packets=discovery_packets, username=username, password=password
+                )
+            else:
+                devices = {}
+                for host in hosts:
+                    device = await Discover.discover_single(
+                        host, username=username, password=password
+                    )
+                    devices[host] = device
+        else:
+            if Config.KASA_COLLECTOR_DEVICE_DISCOVERY:
+                devices = await Discover.discover(
+                    discovery_timeout=discovery_timeout, discovery_packets=discovery_packets
+                )
+            else:
+                devices = {}
+                for host in hosts:
+                    device = await Discover.discover_single(host)
+                    devices[host] = device
+
         logger.info(f"Discovered {len(devices)} devices")
         return {ip: device for ip, device in devices.items() if device.has_emeter}
 
