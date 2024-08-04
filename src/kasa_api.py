@@ -43,7 +43,7 @@ class KasaAPI:
             for host in hosts:
                 device = await Discover.discover_single(host, username=username if use_credentials else None, password=password if use_credentials else None)
                 devices[host] = device
-            logger.info(f"Discovered {len(devices)} devices")
+            logger.info(f"Found {len(devices)} devices from Host List")
             return {ip: device for ip, device in devices.items()}
 
     @staticmethod

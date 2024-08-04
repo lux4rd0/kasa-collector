@@ -181,6 +181,32 @@ Log level for Kasa Collector. Defaults to "INFO".
 - ERROR
 - CRITICAL
 
+`KASA_COLLECTOR_DEVICE_DISCOVERY` - OPTIONAL
+
+Indicates whether to use device discovery to automatically find compatible Kasa devices on the network. Falls back to a host list via `KASA_COLLECTOR_DEVICE_HOSTS` Defaults to True.
+
+- true
+- false
+
+`KASA_COLLECTOR_DEVICE_HOSTS` - OPTIONAL
+
+A list of comma separated IP Addresses of Kasa devices to target. (ex. `"192.168.0.5,192.168.10.6"`)
+
+`KASA_COLLECTOR_USE_CREDENTIALS` - OPTIONAL
+
+Indicates whether to use credentials when connecting to devices. This is required for some newer smart devices, including those which are Matter compatible. Used with `KASA_COLLECTOR_TPLINK_USERNAME` and `KASA_COLLECTOR_TPLINK_PASSWORD`. Defaults to False.
+
+- true
+- false
+
+`KASA_COLLECTOR_TPLINK_USERNAME` - OPTIONAL
+
+The email address for the TP-Link (Kasa) Cloud Account used to authenticate to devices when using `KASA_COLLECTOR_USE_CREDENTIALS`.
+
+`KASA_COLLECTOR_TPLINK_PASSWORD` - OPTIONAL
+
+The password for the TP-Link (Kasa) Cloud Account used to authenticate to devices when using `KASA_COLLECTOR_USE_CREDENTIALS`.
+
 ## Collector Details
 
 #### kasa-collector
