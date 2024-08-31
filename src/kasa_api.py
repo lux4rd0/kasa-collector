@@ -41,8 +41,11 @@ class KasaAPI:
         else:
             devices = {}
             for host in hosts:
-                device = await Discover.discover_single(host, username=username if use_credentials else None, password=password if use_credentials else None)
-                devices[host] = device
+                try:
+                    device = await Discover.discover_single(host, username=username if use_credentials else None, password=password if use_credentials else None)
+                    devices[host] = device
+                except Exception as e:
+                    logger.warning(f"Failed to discover device at {host}: {e}")
             logger.info(f"Found {len(devices)} devices from Host List")
             return {ip: device for ip, device in devices.items()}
 
