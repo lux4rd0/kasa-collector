@@ -1,5 +1,5 @@
 # Use the official Python image as the base image
-FROM python:3.12.3-slim
+FROM python:3.12.6-slim
 
 # Set the working directory inside the container
 WORKDIR /app/kasa_collector

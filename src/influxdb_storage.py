@@ -53,7 +53,7 @@ class InfluxDBStorage:
                 point = point.tag(k, v)
 
         self.write_api.write(bucket=self.bucket, org=self.client.org, record=point)
-        self.logger.info(
+        self.logger.debug(
             f"Wrote data to InfluxDB: {measurement}, Tags: {tags}, Data: {data}"
         )
 
@@ -68,7 +68,7 @@ class InfluxDBStorage:
         filename = f"{output_dir}/{datetime.utcnow().isoformat()}.json"
         async with aiofiles.open(filename, "w") as f:
             await f.write(json.dumps(data, indent=4))
-        self.logger.info(f"Wrote data to JSON file: {filename}")
+        self.logger.debug(f"Wrote data to JSON file: {filename}")
 
     def _dns_lookup(self, ip):
         """
@@ -230,18 +230,37 @@ class InfluxDBStorage:
         try:
             points = []
             for ip, data in device_data.items():
-                sysinfo = data.get("sysinfo", {})
-                alias = sysinfo.get("alias", "unknown")
-                dns_name = self._dns_lookup(ip)
+                # Normalize sysinfo data before processing
+                normalized_sysinfo = self.normalize_sysinfo(data.get("sysinfo", {}))
+                alias = (
+                    data.get("device_alias") or data.get("alias") or ip
+                )  # Check for device_alias, alias, then fallback to IP
+                self.logger.debug(
+                    f"Processing sysinfo for IP: {ip}, Alias: {alias}, Hostname: {data.get('dns_name')}"
+                )
 
-                for key, value in sysinfo.items():
-                    point = Point("sysinfo").tag("ip", ip).tag("dns_name", dns_name)
+                # Log the full normalized sysinfo data being processed
+                self.logger.debug(f"Full sysinfo data: {normalized_sysinfo}")
+
+                for key, value in normalized_sysinfo.items():
+                    # Logging the individual field values
+                    self.logger.debug(f"Processing key: {key}, value: {value}")
+
+                    # Create the InfluxDB point
+                    point = (
+                        Point("sysinfo")
+                        .tag("ip", ip)
+                        .tag("dns_name", data.get("dns_name"))
+                        .tag("device_alias", alias)
+                    )
                     point = point.field(key, self._format_value(value))
-                    point = point.tag("device_alias", alias)
+                    self.logger.debug(
+                        f"Created InfluxDB point for key: {key} with alias: {alias}, value: {value}"
+                    )
                     point = point.time(datetime.now(timezone.utc))
                     points.append(point)
 
-            self.logger.debug(f"Processing sysinfo data for InfluxDB: {points}")
+            self.logger.debug(f"Collected points for InfluxDB: {points}")
             await self.send_to_influxdb(points)
             await self._write_to_file(
                 Config.KASA_COLLECTOR_SYSINFO_OUTPUT_FILE, device_data
@@ -249,6 +268,34 @@ class InfluxDBStorage:
 
         except Exception as e:
             self.logger.error(f"Error processing sysinfo data for InfluxDB: {e}")
+
+    def normalize_sysinfo(self, sysinfo):
+        """
+        Normalize sysinfo data to standardize fields and handle variations.
+
+        This method addresses variations in the sysinfo fields across different device models.
+        For example, some devices report 'sw_ver' (software version) while others report 'fw_ver' (firmware version).
+        This normalization ensures that data is stored consistently in InfluxDB.
+
+        Parameters:
+        - sysinfo (dict): The original sysinfo data from the device.
+
+        Returns:
+        - dict: The normalized sysinfo data.
+        """
+        normalized = {}
+        for key, value in sysinfo.items():
+            # Merge 'fw_ver' into 'sw_ver'
+            if key == "fw_ver":
+                normalized["sw_ver"] = value
+                self.logger.debug(
+                    f"Normalized 'fw_ver' to 'sw_ver' with value: {value}"
+                )
+            else:
+                normalized[key] = value
+
+        # Return the normalized dictionary
+        return normalized
 
     async def send_to_influxdb(self, points):
         """
