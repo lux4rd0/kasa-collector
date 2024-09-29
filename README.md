@@ -1,4 +1,5 @@
 
+  
 
 ## About The Project
 
@@ -83,6 +84,35 @@ docker run -d \
 Be sure to change your InfluxDB details and timezone in the environmental variables.
 
 Running `docker-compose up -d` or the `docker run` command will download and start up the kasa-collector container. 
+
+## How It Works
+
+The Kasa Collector is designed to automate data collection from Kasa Smart Plugs, providing a streamlined approach to gathering, storing, and visualizing device information. It supports both automatic device discovery and manual device configuration, allowing for flexible integration in various environments. Below is a high-level overview of its capabilities:
+
+### Automatic Device Discovery
+
+The Kasa Collector can automatically discover compatible Kasa devices on your network without requiring manual configuration. By default, the collector sends discovery packets regularly (`KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL`) and identifies devices supporting energy monitoring features. The `KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY` environment variable controls this behavior:
+
+- **To Enable Auto-Discovery:** Ensure that `KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY` is set to `true` (default behavior).
+- **To Disable Auto-Discovery:** Set `KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY` to `false`. This prevents automatic discovery and only uses manually specified devices.
+
+### Manual Device Configuration
+
+In cases where devices are not automatically discovered or need specific attention, you can manually specify device IPs or hostnames using the `KASA_COLLECTOR_DEVICE_HOSTS` variable. This variable accepts a comma-separated list of device IPs/hostnames. Manually added devices take precedence over auto-discovered devices and are continuously monitored.
+
+- **Example:** `KASA_COLLECTOR_DEVICE_HOSTS="10.50.0.101,10.50.0.102"`
+
+### TP-Link Account Configuration
+
+For newer Kasa devices that require TP-Link account authentication, you can provide your account credentials using the `KASA_COLLECTOR_TPLINK_USERNAME` and `KASA_COLLECTOR_TPLINK_PASSWORD` variables. These credentials enable the collector to authenticate with devices linked to your TP-Link account.
+
+- **Example Configuration:**
+  ```yaml
+  KASA_COLLECTOR_TPLINK_USERNAME: user@example.com
+  KASA_COLLECTOR_TPLINK_PASSWORD: yourpassword
+  ```
+
+When configured, the collector will attempt to authenticate and control these devices, providing extended functionality for devices that need TP-Link cloud authentication.
 
 ## Environmental Flags
 
@@ -287,4 +317,3 @@ Project Link: https://github.com/lux4rd0/kasa-collector
 - Grafana Labs - [https://grafana.com/](https://grafana.com/)
 - Grafana - [https://grafana.com/oss/grafana/](https://grafana.com/oss/grafana/)
 - Grafana Dashboard Community - [https://grafana.com/grafana/dashboards/](https://grafana.com/grafana/dashboards/)
-
