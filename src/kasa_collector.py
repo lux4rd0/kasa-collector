@@ -27,12 +27,88 @@ class KasaCollector:
         self.storage = InfluxDBStorage()
         self.devices = {}
 
+        # Initialize manual devices if provided
+        self.device_hosts = []
+        if Config.KASA_COLLECTOR_DEVICE_HOSTS:
+            self.device_hosts = [
+                ip.strip() for ip in Config.KASA_COLLECTOR_DEVICE_HOSTS.split(",")
+            ]
+
+        # Initialize credentials if provided
+        self.tplink_username = Config.KASA_COLLECTOR_TPLINK_USERNAME
+        self.tplink_password = Config.KASA_COLLECTOR_TPLINK_PASSWORD
+
+    async def initialize_manual_devices(self):
+        """
+        Initialize manual devices based on the IPs or hostnames specified in the configuration.
+        """
+        for ip in self.device_hosts:
+            try:
+                device = await KasaAPI.get_device(
+                    ip, self.tplink_username, self.tplink_password
+                )
+
+                # Log detailed device information
+                self.logger.debug(f"Device details for {ip}: {device.__dict__}")
+
+                # Check and set alias, log for clarity
+                device_alias = device.alias if device.alias else device.host
+                self.devices[ip] = device
+                self.logger.info(
+                    f"Manually added device: {device_alias} (IP/Hostname: {ip}, Hostname: {socket.getfqdn(ip)})"
+                )
+            except Exception as e:
+                self.logger.error(f"Failed to add manual device {ip}: {e}")
+
     async def discover_devices(self):
         """
-        Discover Kasa devices on the network and store them in the devices attribute.
+        Discover Kasa devices on the network and merge with existing devices.
         """
-        self.devices = await KasaAPI.discover_devices()
-        self.logger.info(f"Discovered {len(self.devices)} devices")
+        if not Config.KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY:
+            self.logger.info("Auto-discovery is disabled. Skipping device discovery.")
+            return
+
+        discovered_devices = await KasaAPI.discover_devices()
+        self.logger.info(
+            f"Discovered {len(discovered_devices)} devices: {discovered_devices}"
+        )
+
+        # Merge auto-discovered devices without overwriting manual devices
+        for ip, device in discovered_devices.items():
+            if ip not in self.devices:
+                self.devices[ip] = device
+                self.logger.info(
+                    f"Auto-discovered new device: {device.alias} (IP: {ip}, Hostname: {socket.getfqdn(ip)})"
+                )
+            else:
+                self.logger.info(
+                    f"Device {device.alias} (IP: {ip}) already initialized manually."
+                )
+
+    async def start(self):
+        """
+        Start the KasaCollector by initializing manual devices, discovering devices,
+        and starting periodic tasks.
+        """
+        # Initialize manual devices first
+        await self.initialize_manual_devices()
+
+        # Perform device discovery if auto-discovery is enabled
+        if Config.KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY:
+            await self.discover_devices()
+
+        # Start periodic tasks
+        asyncio.create_task(self.periodic_fetch())
+        asyncio.create_task(self.periodic_discover())
+        asyncio.create_task(self.periodic_sysinfo_fetch())
+
+    async def periodic_discover(self):
+        """
+        Periodically discover devices on the network, respecting existing manual devices.
+        """
+        while True:
+            await self.discover_devices()
+            await asyncio.sleep(Config.KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL)
 
     async def fetch_and_store_data(self):
         """
@@ -40,10 +116,34 @@ class KasaCollector:
         """
         for ip, device in self.devices.items():
             try:
+                # Fetch device data and log the response
                 data = await KasaAPI.fetch_device_data(device)
-                await self.storage.write_data("kasa_device", data["emeter"], {"ip": ip})
+                self.logger.debug(f"Fetched data for device {ip}: {data}")
+
+                # Log current aliases before using them
+                self.logger.debug(f"Pre-fetch device alias: {device.alias}, IP: {ip}")
+
+                # Re-fetch alias to ensure it's updated correctly
+                updated_alias = device.alias if device.alias else device.host
+                self.logger.debug(f"Post-fetch device alias: {updated_alias}, IP: {ip}")
+
+                # Store emeter and sysinfo data
+                self.logger.debug(
+                    f"Storing emeter data for {updated_alias}: {data['emeter']}"
+                )
                 await self.storage.write_data(
-                    "kasa_sysinfo", data["sys_info"], {"ip": ip}
+                    "kasa_device",
+                    data["emeter"],
+                    {"ip": ip, "device_alias": updated_alias},
+                )
+
+                self.logger.debug(
+                    f"Storing sysinfo data for {updated_alias}: {data['sys_info']}"
+                )
+                await self.storage.write_data(
+                    "kasa_sysinfo",
+                    data["sys_info"],
+                    {"ip": ip, "device_alias": updated_alias},
                 )
 
                 if Config.KASA_COLLECTOR_WRITE_TO_FILE:
@@ -61,37 +161,13 @@ class KasaCollector:
             await self.fetch_and_store_data()
             await asyncio.sleep(Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL)
 
-    async def periodic_discover(self):
-        """
-        Periodically discover devices on the network.
-        """
-        while True:
-            await self.discover_devices()
-            await asyncio.sleep(Config.KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL)
-
-    async def start(self):
-        """
-        Start the KasaCollector by discovering devices and starting periodic tasks.
-        """
-        await self.discover_devices()
-        asyncio.create_task(self.periodic_fetch())
-        asyncio.create_task(self.periodic_discover())
-
     async def fetch_and_send_emeter_data(self, ip, device):
         """
         Fetch and send emeter data from a device. Retry if necessary.
         """
         retries = 0
-        alias = "Unknown"
-        hostname = "Unknown"
-
-        try:
-            alias = device.alias
-            hostname = socket.getfqdn(ip)
-        except Exception as e:
-            self.logger.error(
-                f"Error retrieving alias or hostname for device {ip}: {e}"
-            )
+        alias = device.alias if device.alias else device.host
+        hostname = socket.getfqdn(ip)
 
         while retries < Config.KASA_COLLECTOR_FETCH_MAX_RETRIES:
             try:
@@ -150,9 +226,11 @@ class KasaCollector:
         Process emeter data for a device.
         """
         emeter_data = {key: int(value) for key, value in device.emeter_realtime.items()}
+        device_alias = device.alias if device.alias else device.host
+
         device_data = {
             "emeter": emeter_data,
-            "alias": device.alias,
+            "alias": device_alias,
             "dns_name": socket.getfqdn(ip),
             "ip": ip,
             "equipment_type": "device",
@@ -164,23 +242,37 @@ class KasaCollector:
         Fetch and send system info data from a device. Retry if necessary.
         """
         ip = device.host
-        alias = "Unknown"
-        hostname = "Unknown"
+        alias = (
+            device.alias if device.alias else device.host
+        )  # Use alias or host as fallback
+        hostname = None  # Initialize hostname to avoid uninitialized variable error
         retries = 0
-
-        try:
-            alias = device.alias
-            hostname = socket.getfqdn(ip)
-        except Exception as e:
-            self.logger.error(
-                f"Error retrieving alias or hostname for device {ip}: {e}"
-            )
 
         while retries < Config.KASA_COLLECTOR_FETCH_MAX_RETRIES:
             try:
                 await device.update()
-                sysinfo = {"sysinfo": device.sys_info}
-                await self.storage.process_sysinfo_data({ip: sysinfo})
+                hostname = socket.getfqdn(
+                    ip
+                )  # Get the hostname after successful update
+
+                # Log the sysinfo and alias
+                self.logger.debug(f"Fetched sysinfo for device {ip}: {device.sys_info}")
+                self.logger.debug(f"Pre-fetch Alias: {alias}, Hostname: {hostname}")
+
+                # Re-fetch alias to ensure it's updated correctly
+                alias = device.alias if device.alias else device.host
+                self.logger.debug(f"Post-fetch Alias: {alias}, Hostname: {hostname}")
+
+                sysinfo_data = {
+                    "sysinfo": device.sys_info,
+                    "device_alias": alias,  # Use the updated alias
+                    "dns_name": hostname,
+                    "ip": ip,
+                    "equipment_type": "device",
+                }
+                # Log the data being sent to InfluxDBStorage
+                self.logger.debug(f"Storing sysinfo data for {ip}: {sysinfo_data}")
+                await self.storage.process_sysinfo_data({ip: sysinfo_data})
                 break  # Break the loop if successful
             except Exception as e:
                 self.logger.error(
@@ -203,6 +295,7 @@ class KasaCollector:
             device_count = len(self.devices)
             self.logger.info(f"Starting periodic_fetch for {device_count} devices")
 
+            # Use asyncio.gather to concurrently fetch data from all devices
             await asyncio.gather(
                 *[
                     self.fetch_and_send_emeter_data(ip, device)
@@ -212,18 +305,25 @@ class KasaCollector:
 
             end_time = datetime.now()
             elapsed = (end_time - start_time).total_seconds()
+
+            # Check if the fetch operation took longer than the defined interval
             if elapsed > Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL:
                 self.logger.warning(
                     f"Fetch operation took {format_duration(elapsed)}, which is longer than the set interval of {Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL} seconds."
                 )
 
+            # Calculate next run time and log the details
             next_run = end_time + timedelta(
                 seconds=max(0, Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL - elapsed)
             )
             self.logger.info(
-                f"Finished periodic_fetch for {device_count} devices. Duration: {format_duration(elapsed)}. Next run in {format_duration(Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL - elapsed)} at {next_run.strftime('%Y-%m-%d %H:%M:%S')}"
+                f"Finished periodic_fetch for {device_count} devices. "
+                f"Duration: {format_duration(elapsed)}. Next run in "
+                f"{format_duration(Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL - elapsed)} "
+                f"at {next_run.strftime('%Y-%m-%d %H:%M:%S')}"
             )
 
+            # Sleep until the next scheduled fetch time
             await asyncio.sleep(
                 max(0, Config.KASA_COLLECTOR_DATA_FETCH_INTERVAL - elapsed)
             )
@@ -345,37 +445,36 @@ async def main():
     lock = asyncio.Lock()
     logger.info("Starting Kasa Collector")
 
-    try:
-        logger.info("Starting Kasa device discovery...")
-        start_time_discovery = datetime.now()
-        try:
-            devices = await KasaAPI.discover_devices()
-        except Exception as e:
-            logger.error(f"Error during device discovery: {e}")
-            devices = {}
+    # Initialize the KasaCollector instance
+    collector = KasaCollector()
 
-        if devices:
-            device_details = [
-                f"\t{device.alias} (IP: {ip}, Hostname: {socket.getfqdn(ip)})"
-                for ip, device in devices.items()
-            ]
-            device_details_str = "\n".join(device_details)
+    try:
+        # Initialize manual devices first
+        await collector.initialize_manual_devices()
+
+        # Perform initial device discovery if auto-discovery is enabled
+        if Config.KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY:
+            logger.info("Starting initial Kasa device discovery...")
+            start_time_discovery = datetime.now()
+            try:
+                await collector.discover_devices()
+            except Exception as e:
+                logger.error(f"Error during initial device discovery: {e}")
+
+            end_time_discovery = datetime.now()
+            elapsed_discovery = (
+                end_time_discovery - start_time_discovery
+            ).total_seconds()
             logger.info(
-                f"Initial device discovery found {len(devices)} devices:\n{device_details_str}"
+                f"Initial device discovery completed in {format_duration(elapsed_discovery)}"
             )
         else:
-            logger.info("No devices found in initial discovery")
+            logger.info(
+                "Auto-discovery is disabled. Only using manually specified devices."
+            )
 
-        end_time_discovery = datetime.now()
-        elapsed_discovery = (end_time_discovery - start_time_discovery).total_seconds()
-        logger.info(
-            f"Device discovery at startup took {format_duration(elapsed_discovery)}"
-        )
-
-        collector = KasaCollector()
-        collector.devices = devices
-
-        discovery_task = asyncio.create_task(collector.periodic_discover_devices(lock))
+        # Start periodic tasks
+        discovery_task = asyncio.create_task(collector.periodic_discover())
         data_fetch_task = asyncio.create_task(collector.periodic_fetch())
         sysinfo_fetch_task = asyncio.create_task(collector.periodic_sysinfo_fetch())
 

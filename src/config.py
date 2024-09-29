@@ -1,6 +1,5 @@
 import os
 
-
 class Config:
     # Whether to write data to file. Expected values are "true" or "false".
     # Default is "False".
@@ -88,3 +87,15 @@ class Config:
     KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR = os.getenv(
         "KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR", "INFO"
     ).upper()
+
+    # Comma-separated list of device hosts (IPs) for manual configuration. Default is None.
+    KASA_COLLECTOR_DEVICE_HOSTS = os.getenv("KASA_COLLECTOR_DEVICE_HOSTS", None)
+
+    # TP-Link account credentials for devices that require login. Default is None.
+    KASA_COLLECTOR_TPLINK_USERNAME = os.getenv("KASA_COLLECTOR_TPLINK_USERNAME", None)
+    KASA_COLLECTOR_TPLINK_PASSWORD = os.getenv("KASA_COLLECTOR_TPLINK_PASSWORD", None)
+
+    # Flag to enable/disable auto-discovery. Default is True.
+    KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY = (
+        os.getenv("KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY", "True").lower() == "true"
+    )
