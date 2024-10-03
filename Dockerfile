@@ -5,7 +5,7 @@ FROM python:3.12.6-slim
 WORKDIR /app/kasa_collector
 
 # Copy the requirements file and other application files into the container
-COPY requirements.txt config.py influxdb_storage.py kasa_collector.py kasa_api.py  ./
+COPY requirements.txt ./src/config.py ./src/device_manager.py ./src/influxdb_storage.py ./src/kasa_api.py ./src/kasa_collector.py ./src/poller.py  ./
 
 # Upgrade pip and install required packages
 RUN pip install --upgrade pip && \
