@@ -1,7 +1,9 @@
+import os
 import logging
 import json
 import socket
 import aiofiles
+
 from datetime import datetime, timezone
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 from influxdb_client.client.write_api import ASYNCHRONOUS
@@ -35,15 +37,13 @@ class InfluxDBStorage:
             )
         )
         self.bucket = Config.KASA_COLLECTOR_INFLUXDB_BUCKET
+        self.sysinfo_data = (
+            {}
+        )  # Store sysinfo for device mapping during emeter processing
 
     async def write_data(self, measurement, data, tags=None):
         """
         Write data to InfluxDB.
-
-        Parameters:
-        - measurement (str): The measurement name.
-        - data (dict): The data to write.
-        - tags (dict): Optional tags to add to the data.
         """
         point = Point(measurement).time(datetime.utcnow())
         for k, v in data.items():
@@ -57,252 +57,196 @@ class InfluxDBStorage:
             f"Wrote data to InfluxDB: {measurement}, Tags: {tags}, Data: {data}"
         )
 
-    async def write_to_json(self, data, output_dir):
-        """
-        Write data to a JSON file.
-
-        Parameters:
-        - data (dict): The data to write.
-        - output_dir (str): The directory to write the JSON file to.
-        """
-        filename = f"{output_dir}/{datetime.utcnow().isoformat()}.json"
-        async with aiofiles.open(filename, "w") as f:
-            await f.write(json.dumps(data, indent=4))
-        self.logger.debug(f"Wrote data to JSON file: {filename}")
-
-    def _dns_lookup(self, ip):
-        """
-        Perform a DNS lookup for the given IP address.
-
-        Parameters:
-        - ip (str): The IP address to look up.
-
-        Returns:
-        - str: The DNS name associated with the IP address.
-        """
-        try:
-            return socket.gethostbyaddr(ip)[0]
-        except socket.herror:
-            return "unknown"
-
-    def convert_to_points(self, data):
-        """
-        Convert device data to InfluxDB points.
-
-        Parameters:
-        - data (dict): The device data.
-
-        Returns:
-        - list: A list of InfluxDB points.
-        """
-        points = []
-        for ip, device_data in data.items():
-            alias = device_data["system"]["get_sysinfo"].get("alias", "unknown")
-            dns_name = self._dns_lookup(ip)
-            for category, data in device_data.items():
-                self._parse_category(ip, alias, dns_name, category, data, points)
-        return points
-
-    def _parse_category(
-        self, ip, alias, dns_name, category, data, points, parent_key=""
-    ):
-        """
-        Recursively parse categories and add data to InfluxDB points.
-
-        Parameters:
-        - ip (str): The IP address of the device.
-        - alias (str): The alias of the device.
-        - dns_name (str): The DNS name of the device.
-        - category (str): The category of the data.
-        - data (dict or list or other): The data to parse.
-        - points (list): The list of InfluxDB points to add to.
-        - parent_key (str): The parent key for nested data.
-        """
-        if isinstance(data, dict):
-            for key, value in data.items():
-                new_key = f"{parent_key}.{key}" if parent_key else key
-                self._parse_category(
-                    ip, alias, dns_name, category, value, points, new_key
-                )
-        elif isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    self._parse_list_item(
-                        ip, alias, dns_name, category, item, points, parent_key
-                    )
-        else:
-            point = (
-                Point(category)
-                .tag("ip", ip)
-                .tag("alias", alias)
-                .tag("dns_name", dns_name)
-            )
-            point = point.field(parent_key, self._format_value(data))
-            point = point.time(datetime.now(timezone.utc))
-            points.append(point)
-
-    def _parse_list_item(self, ip, alias, dns_name, category, item, points, parent_key):
-        """
-        Parse list items and add them to InfluxDB points.
-
-        Parameters:
-        - ip (str): The IP address of the device.
-        - alias (str): The alias of the device.
-        - dns_name (str): The DNS name of the device.
-        - category (str): The category of the data.
-        - item (dict): The list item to parse.
-        - points (list): The list of InfluxDB points to add to.
-        - parent_key (str): The parent key for nested data.
-        """
-        for k, v in item.items():
-            if isinstance(v, dict):
-                for sub_key, sub_value in v.items():
-                    new_key = (
-                        f"{parent_key}.{k}.{sub_key}"
-                        if parent_key
-                        else f"{k}.{sub_key}"
-                    )
-                    self._parse_category(
-                        ip, alias, dns_name, category, sub_value, points, new_key
-                    )
-            else:
-                point = (
-                    Point(category)
-                    .tag("ip", ip)
-                    .tag("alias", alias)
-                    .tag("dns_name", dns_name)
-                )
-                point = point.field(f"{parent_key}.{k}", self._format_value(v))
-                point = point.time(datetime.now(timezone.utc))
-                points.append(point)
-
-    def _format_value(self, value):
-        """
-        Format values for InfluxDB points.
-
-        Parameters:
-        - value: The value to format.
-
-        Returns:
-        - formatted value
-        """
-        if isinstance(value, (int, float, str, bool)):
-            return value
-        elif isinstance(value, list):
-            return ",".join(map(str, value))
-        return str(value)
-
     async def process_emeter_data(self, device_data):
         """
         Process emeter data and send it to InfluxDB.
-
-        Parameters:
-        - device_data (dict): The emeter data of devices.
-        """
-        points = []
-        for ip, data in device_data.items():
-            emeter_data = data.get("emeter", {})
-            alias = data.get("alias", "unknown")
-            dns_name = data.get("dns_name", "unknown")
-            equipment_type = data.get("equipment_type", "device")
-            plug_alias = data.get("plug_alias", "unknown")
-
-            for metric, value in emeter_data.items():
-                point = Point("emeter").tag("ip", ip).tag("dns_name", dns_name)
-                point = point.field(metric, value)
-                point = point.tag("device_alias", alias)
-                point = point.tag("equipment_type", equipment_type)
-                if equipment_type == "plug":
-                    point = point.tag("plug_alias", plug_alias)
-                point = point.time(datetime.now(timezone.utc))
-                points.append(point)
-
-        await self.send_to_influxdb(points)
-        await self._write_to_file(Config.KASA_COLLECTOR_EMETER_OUTPUT_FILE, device_data)
-
-    async def process_sysinfo_data(self, device_data):
-        """
-        Process sysinfo data and send it to InfluxDB.
-
-        Parameters:
-        - device_data (dict): The sysinfo data of devices.
         """
         try:
             points = []
             for ip, data in device_data.items():
-                # Normalize sysinfo data before processing
+                emeter_data = data.get("emeter", {})
+                alias = data.get("alias", "unknown")
+                dns_name = data.get("dns_name", "unknown")
+                equipment_type = data.get("equipment_type", "device")
+
+                # Fetch the sysinfo for this device
+                sysinfo = self.sysinfo_data.get(ip, {}).get("sysinfo", {})
+                device_id = sysinfo.get("deviceId", None)  # Get device_id from sysinfo
+                children = sysinfo.get("children", [])
+
+                # Log for sysinfo lookup
+                self.logger.debug(f"Lookup sysinfo for {ip}: {sysinfo}")
+
+                # Determine if it's a plug on a power strip
+                plug_alias = data.get(
+                    "plug_alias", alias
+                )  # Default plug alias to device alias
+                plug_id = None
+
+                if children:
+                    # This is a power strip with child plugs
+                    plug_info = self._get_plug_info_from_sysinfo_by_alias(
+                        sysinfo, plug_alias
+                    )
+                    if plug_info:
+                        plug_id = plug_info.get(
+                            "plug_id", f"{len(children)}"
+                        )  # Use numeric plug_id (1, 2, 3, ...)
+                        plug_alias = plug_info.get("alias", plug_alias)
+                    self.logger.debug(
+                        f"Found plug_alias={plug_alias}, plug_id={plug_id} for ip={ip}"
+                    )
+
+                # Log Device Alias and IDs for debugging
+                self.logger.debug(f"Device Alias: {alias}, Device ID: {device_id}")
+
+                for metric, value in emeter_data.items():
+                    point = (
+                        Point("emeter")
+                        .tag("ip", ip)
+                        .tag("dns_name", dns_name)
+                        .tag("device_alias", alias)
+                        .tag("equipment_type", equipment_type)
+                    )
+
+                    # Add device_id for all devices if available
+                    if device_id:
+                        point = point.tag("device_id", device_id)
+
+                    # Add plug-specific tags if this is a plug
+                    if plug_id:
+                        point = point.tag("plug_alias", plug_alias).tag(
+                            "plug_id", plug_id
+                        )
+
+                    point = point.field(metric, value)
+                    point = point.time(datetime.now(timezone.utc))
+                    points.append(point)
+
+            await self.send_to_influxdb(points)
+            await self._append_to_file(device_data)
+
+        except Exception as e:
+            self.logger.error(f"Error processing emeter data for InfluxDB: {e}")
+
+    def _get_plug_info_from_sysinfo_by_alias(self, sysinfo, plug_alias):
+        """
+        Retrieve plug info from sysinfo data and assign a simple numeric plug ID (e.g., 1, 2, 3).
+        """
+        children = sysinfo.get("children", [])
+        for index, child in enumerate(children):
+            if child.get("alias") == plug_alias:
+                # Assign plug_id as the index + 1 (1-based index)
+                child["plug_id"] = f"{index + 1}"
+                return child
+        return None
+
+    async def process_sysinfo_data(self, device_data):
+        """
+        Process sysinfo data and store it for later use in emeter processing.
+        """
+        try:
+            # Store the sysinfo data for later use in emeter processing
+            self.sysinfo_data.update(device_data)
+
+            # Log for adding sysinfo data
+            self.logger.debug(
+                f"Updated sysinfo data: {json.dumps(self.sysinfo_data, indent=4)}"
+            )
+
+            points = []
+            for ip, data in device_data.items():
                 normalized_sysinfo = self.normalize_sysinfo(data.get("sysinfo", {}))
-                alias = (
-                    data.get("device_alias") or data.get("alias") or ip
-                )  # Check for device_alias, alias, then fallback to IP
+                device_id = normalized_sysinfo.get("device_id", "unknown")
+                alias = data.get("device_alias") or data.get("alias") or ip
                 self.logger.debug(
                     f"Processing sysinfo for IP: {ip}, Alias: {alias}, Hostname: {data.get('dns_name')}"
                 )
 
-                # Log the full normalized sysinfo data being processed
-                self.logger.debug(f"Full sysinfo data: {normalized_sysinfo}")
+                # Create a sysinfo point for the parent device
+                point = (
+                    Point("sysinfo")
+                    .tag("ip", ip)
+                    .tag("dns_name", data.get("dns_name"))
+                    .tag("device_alias", alias)
+                    .tag("device_id", device_id)
+                )
 
                 for key, value in normalized_sysinfo.items():
-                    # Logging the individual field values
-                    self.logger.debug(f"Processing key: {key}, value: {value}")
+                    point = point.field(key, self._format_value(value))
 
-                    # Create the InfluxDB point
-                    point = (
-                        Point("sysinfo")
+                point = point.time(datetime.now(timezone.utc))
+                points.append(point)
+
+                # Process child devices (plugs) and assign sequential plug_id values
+                children = normalized_sysinfo.get("children", [])
+                for index, child in enumerate(children, start=1):
+                    plug_alias = child.get("alias", f"Plug {index}")
+
+                    # Generate sequential plug_id based on the index (1, 2, 3, etc.)
+                    plug_id = str(index)
+
+                    child_point = (
+                        Point("sysinfo_child")
                         .tag("ip", ip)
                         .tag("dns_name", data.get("dns_name"))
                         .tag("device_alias", alias)
+                        .tag("device_id", device_id)
+                        .tag("plug_id", plug_id)  # Sequential plug_id (1, 2, 3, etc.)
+                        .tag("plug_alias", plug_alias)
                     )
-                    point = point.field(key, self._format_value(value))
-                    self.logger.debug(
-                        f"Created InfluxDB point for key: {key} with alias: {alias}, value: {value}"
-                    )
-                    point = point.time(datetime.now(timezone.utc))
-                    points.append(point)
+
+                    for key, value in child.items():
+                        if key != "id":  # Exclude the original 'id' field
+                            child_point = child_point.field(
+                                key, self._format_value(value)
+                            )
+
+                    child_point = child_point.time(datetime.now(timezone.utc))
+                    points.append(child_point)
+
+                self.logger.debug(f"Full sysinfo data: {normalized_sysinfo}")
 
             self.logger.debug(f"Collected points for InfluxDB: {points}")
             await self.send_to_influxdb(points)
-            await self._write_to_file(
-                Config.KASA_COLLECTOR_SYSINFO_OUTPUT_FILE, device_data
-            )
+            await self._append_to_file(device_data)
 
         except Exception as e:
             self.logger.error(f"Error processing sysinfo data for InfluxDB: {e}")
 
     def normalize_sysinfo(self, sysinfo):
         """
-        Normalize sysinfo data to standardize fields and handle variations.
-
-        This method addresses variations in the sysinfo fields across different device models.
-        For example, some devices report 'sw_ver' (software version) while others report 'fw_ver' (firmware version).
-        This normalization ensures that data is stored consistently in InfluxDB.
-
-        Parameters:
-        - sysinfo (dict): The original sysinfo data from the device.
-
-        Returns:
-        - dict: The normalized sysinfo data.
+        Normalize sysinfo data to standardize fields and handle variations,
+        with specific updates for KP125M devices.
         """
         normalized = {}
-        for key, value in sysinfo.items():
-            # Merge 'fw_ver' into 'sw_ver'
-            if key == "fw_ver":
-                normalized["sw_ver"] = value
-                self.logger.debug(
-                    f"Normalized 'fw_ver' to 'sw_ver' with value: {value}"
-                )
-            else:
-                normalized[key] = value
+        device_model = sysinfo.get("model", "")
 
-        # Return the normalized dictionary
+        # Only apply specific transformations for KP125M devices
+        if device_model == "KP125M":
+            for key, value in sysinfo.items():
+                if key == "fw_ver":
+                    normalized["sw_ver"] = value
+                    self.logger.debug(
+                        f"Normalized 'fw_ver' to 'sw_ver' with value: {value}"
+                    )
+                elif key == "device_on":
+                    # Normalize 'device_on' to 'relay_state' and convert boolean to integer for KP125M
+                    normalized["relay_state"] = 1 if value else 0
+                    self.logger.debug(
+                        f"Normalized 'device_on' to 'relay_state' for KP125M with value: {value}"
+                    )
+                else:
+                    normalized[key] = value
+        else:
+            # If not KP125M, retain the sysinfo as-is
+            normalized = sysinfo
+
         return normalized
 
     async def send_to_influxdb(self, points):
         """
         Send data points to InfluxDB.
-
-        Parameters:
-        - points (list): A list of InfluxDB points to send.
         """
         try:
             for point in points:
@@ -311,20 +255,47 @@ class InfluxDBStorage:
         except Exception as e:
             self.logger.error(f"Error sending data to InfluxDB: {e}")
 
-    async def _write_to_file(self, file_path, data):
+    async def _append_to_file(self, data):
         """
-        Write data to a file.
-
-        Parameters:
-        - file_path (str): The file path to write to.
-        - data (dict): The data to write.
+        Append device data to individual files based on type (sysinfo or emeter).
         """
         try:
-            if Config.KASA_COLLECTOR_WRITE_TO_FILE:
-                async with aiofiles.open(file_path, "a") as file:
-                    await file.write(json.dumps(data, indent=4) + "\n")
+            output_dir = Config.KASA_COLLECTOR_OUTPUT_DIR
+            os.makedirs(output_dir, exist_ok=True)
+
+            for ip, device_data in data.items():
+                alias = (
+                    device_data.get("alias") or device_data.get("device_alias") or ip
+                )
+                dns_name = device_data.get("dns_name", "")
+                identifier = alias or dns_name or ip
+                sanitized_identifier = "".join(
+                    c if c.isalnum() or c in "-_." else "_" for c in identifier
+                )
+                file_type = "emeter" if "emeter" in device_data else "sysinfo"
+                filename = os.path.join(
+                    output_dir, f"{file_type}_{sanitized_identifier}.json"
+                )
+
+                # Append data to the file instead of overwriting it
+                async with aiofiles.open(filename, "a") as f:
+                    await f.write(json.dumps({ip: device_data}, indent=4) + "\n")
+                    self.logger.debug(
+                        f"Appended {file_type} data to JSON file: {filename}"
+                    )
+
         except Exception as e:
-            self.logger.error(f"Error writing data to file {file_path}: {e}")
+            self.logger.error(f"Error writing data to file: {e}")
+
+    def _format_value(self, value):
+        """
+        Format values for InfluxDB points.
+        """
+        if isinstance(value, (int, float, str, bool)):
+            return value
+        elif isinstance(value, list):
+            return ",".join(map(str, value))
+        return str(value)
 
     def close(self):
         """

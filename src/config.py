@@ -1,5 +1,6 @@
 import os
 
+
 class Config:
     # Whether to write data to file. Expected values are "true" or "false".
     # Default is "False".
@@ -10,7 +11,7 @@ class Config:
     # Directory where output files will be saved. Default is "output".
     KASA_COLLECTOR_OUTPUT_DIR = os.getenv("KASA_COLLECTOR_OUTPUT_DIR", "output")
 
-    # Maximum number of retries for fetching data from devices. Default is 5.
+    # Maximum number of retries for fetching data from devices (emeter and sysinfo). Default is 5.
     KASA_COLLECTOR_FETCH_MAX_RETRIES = int(
         os.getenv("KASA_COLLECTOR_FETCH_MAX_RETRIES", "5")
     )
@@ -51,16 +52,6 @@ class Config:
         os.getenv("KASA_COLLECTOR_KEEP_MISSING_DEVICES", "True").lower() == "true"
     )
 
-    # Path to the output file for system information data.
-    KASA_COLLECTOR_SYSINFO_OUTPUT_FILE = os.path.join(
-        os.getenv("KASA_COLLECTOR_OUTPUT_DIR", "output"), "sysinfo_output.json"
-    )
-
-    # Path to the output file for emeter data.
-    KASA_COLLECTOR_EMETER_OUTPUT_FILE = os.path.join(
-        os.getenv("KASA_COLLECTOR_OUTPUT_DIR", "output"), "emeter_output.json"
-    )
-
     # URL for the InfluxDB instance.
     KASA_COLLECTOR_INFLUXDB_URL = os.getenv("KASA_COLLECTOR_INFLUXDB_URL")
 
@@ -99,3 +90,11 @@ class Config:
     KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY = (
         os.getenv("KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY", "True").lower() == "true"
     )
+
+    # Maximum number of retries for device authentication. Default is 3.
+    KASA_COLLECTOR_AUTH_MAX_RETRIES = int(
+        os.getenv("KASA_COLLECTOR_AUTH_MAX_RETRIES", "3")
+    )
+
+    # Timeout in seconds for device authentication. Default is 10 seconds.
+    KASA_COLLECTOR_AUTH_TIMEOUT = int(os.getenv("KASA_COLLECTOR_AUTH_TIMEOUT", "10"))
