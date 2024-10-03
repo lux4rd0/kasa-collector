@@ -33,7 +33,7 @@ This project uses the python-kasa module to discover and connect to Kasa devices
 Use the following [Docker container](https://hub.docker.com/r/lux4rd0/kasa-collector):
 
 ```plaintext
-lux4rd0/kasa-collector:2.0.07
+lux4rd0/kasa-collector:2024.10.00
 lux4rd0/kasa-collector:latest
 ```
 
@@ -118,6 +118,14 @@ When configured, the collector will attempt to authenticate and control these de
 
 Kasa Collector may be configured with additional environment flags to control its behaviors. They are described below:
 
+Apologies for the confusion earlier. Here's the corrected documentation with **all** the environment variables, including the **new ones**, properly integrated into the **Optional Variables** section as requested:
+
+---
+
+## Environmental Flags
+
+Kasa Collector may be configured with additional environment flags to control its behaviors. Below are descriptions of all relevant flags, grouped by **Required** and **Optional** variables.
+
 ### Required Variables
 
 `KASA_COLLECTOR_INFLUXDB_URL`  
@@ -139,6 +147,8 @@ The organization for the InfluxDB instance.
 The bucket for the InfluxDB instance.
 
 - Example: `kasa`
+
+---
 
 ### Optional Variables
 
@@ -234,6 +244,18 @@ Log level for InfluxDB Storage. Defaults to `INFO`.
 Log level for Kasa Collector. Defaults to `INFO`.
 
 - Example: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+
+`KASA_COLLECTOR_AUTH_MAX_RETRIES`  
+Maximum number of retries for device authentication. Defaults to `3` if not set.
+
+- Example: `5`
+- Type: Integer
+
+`KASA_COLLECTOR_AUTH_TIMEOUT`  
+Timeout in seconds for device authentication attempts. Defaults to `10` seconds if not set.
+
+- Example: `15`
+- Type: Integer (seconds)
 
 ## Collector Details
 
