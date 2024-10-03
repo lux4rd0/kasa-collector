@@ -19,7 +19,7 @@ class KasaAPI:
     async def discover_devices():
         """
         Discover Kasa devices on the network using the Discover class.
-        Filters out devices that do not have emeter functionality.
+        Log basic discovery information without checking emeter functionality yet.
         """
         discovery_timeout = Config.KASA_COLLECTOR_DISCOVERY_TIMEOUT
         discovery_packets = Config.KASA_COLLECTOR_DISCOVERY_PACKETS
@@ -27,21 +27,21 @@ class KasaAPI:
             discovery_timeout=discovery_timeout, discovery_packets=discovery_packets
         )
         logger.info(f"Discovered {len(devices)} devices")
-        # Filter and return only devices that have emeter functionality
-        return {ip: device for ip, device in devices.items() if device.has_emeter}
+
+        # Log each device discovered, but avoid mentioning emeter until authenticated
+        for ip, device in devices.items():
+            device_info = await KasaAPI.get_device_info(device)
+            logger.info(
+                f"Device discovered: Alias: {device_info['alias']}, IP: {device_info['ip']}, DNS: {device_info['dns_name']}"
+            )
+
+        return devices
 
     @staticmethod
     async def get_device(ip_or_hostname, username=None, password=None):
         """
         Get a Kasa device by IP address or hostname. Attempt to use credentials if provided.
-
-        Parameters:
-        - ip_or_hostname (str): IP address or hostname of the device.
-        - username (str): Username for devices that require authentication.
-        - password (str): Password for devices that require authentication.
-
-        Returns:
-        - device (SmartDevice): The initialized device, with authentication if applicable.
+        Log whether authentication was attempted and if it was successful.
         """
         try:
             # Resolve hostname to IP if necessary
@@ -66,22 +66,28 @@ class KasaAPI:
                 logger.info(
                     f"Discovered device: {device.alias if device.alias else device.model} (IP: {ip})"
                 )
+
+            # Ensure full initialization by calling update
+            await device.update()
+
+            # Check if the device has emeter capability
+            if device.has_emeter:
+                logger.info(f"Device {device.alias} supports emeter functionality.")
+            else:
+                logger.warning(
+                    f"Device {device.alias} does not support emeter functionality."
+                )
+
         except Exception as e:
             logger.error(f"Failed to discover or authenticate device {ip}: {e}")
             raise
-
-        # Check capabilities after discovery
-        if not device.has_emeter and not hasattr(device, "sys_info"):
-            logger.warning(
-                f"Device {ip} does not support emeter or sysinfo capabilities."
-            )
 
         return device
 
     @staticmethod
     async def fetch_emeter_data(device):
         """
-        Fetch emeter data from a device.
+        Fetch emeter data from a device, with logging.
         """
         await device.update()
         if not device.has_emeter:
@@ -95,7 +101,7 @@ class KasaAPI:
     @staticmethod
     async def fetch_sysinfo(device):
         """
-        Fetch system information from a device.
+        Fetch system information from a device, with logging.
         """
         await device.update()
         if not hasattr(device, "sys_info"):
@@ -109,7 +115,7 @@ class KasaAPI:
     @staticmethod
     async def fetch_device_data(device):
         """
-        Fetch both emeter and system information from a device.
+        Fetch both emeter and system information from a device, with logging.
         """
         await device.update()
         logger.info(f"Fetched device data for {device.model}")
