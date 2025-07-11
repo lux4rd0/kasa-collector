@@ -29,14 +29,15 @@ services:
 
 ## Documentation
 
-Full documentation is available in the [Project Wiki](https://github.com/lux4rd0/kasa-collector/wiki):
+Full documentation is available in the [docs/wiki](docs/wiki) directory:
 
-- **[Getting Started](https://github.com/lux4rd0/kasa-collector/wiki/Getting-Started)** - Initial setup guide
-- **[Configuration](https://github.com/lux4rd0/kasa-collector/wiki/Environmental-Flags)** - All environment variables
-- **[Supported Devices](https://github.com/lux4rd0/kasa-collector/wiki/Supported-Devices)** - Compatible Kasa devices
-- **[Grafana Dashboards](https://github.com/lux4rd0/kasa-collector/wiki/Grafana-Dashboards)** - Visualization setup
-- **[Troubleshooting](https://github.com/lux4rd0/kasa-collector/wiki/Troubleshooting)** - Common issues and solutions
-- **[How It Works](https://github.com/lux4rd0/kasa-collector/wiki/How-It-Works)** - Technical details
+- **[Getting Started](docs/wiki/Getting-Started.md)** - Initial setup guide
+- **[Configuration](docs/wiki/Environmental-Flags.md)** - All environment variables
+- **[Supported Devices](docs/wiki/Supported-Devices.md)** - Compatible Kasa devices
+- **[Grafana Dashboards](docs/wiki/Grafana-Dashboards.md)** - Visualization setup
+- **[Troubleshooting](docs/wiki/Troubleshooting.md)** - Common issues and solutions
+- **[FAQ](docs/wiki/FAQ.md)** - Frequently asked questions
+- **[How It Works](docs/wiki/How-It-Works.md)** - Technical details
 
 ## Features
 
