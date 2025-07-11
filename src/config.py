@@ -1,55 +1,96 @@
 import os
+import sys
+from typing import Optional
+
+type ConfigValue = int | str | bool
+type ConfigDict = dict[str, ConfigValue]
+
+# Valid log levels for validation
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
+
+def _get_bool_config(env_var: str, default: bool = False) -> bool:
+    """
+    Safely get boolean configuration from environment variable.
+    Accepts: true/false, yes/no, 1/0, on/off (case insensitive)
+    """
+    value = os.getenv(env_var, str(default)).lower()
+    return value in {"true", "yes", "1", "on"}
+
+
+def _get_int_config(env_var: str, default: int, min_value: Optional[int] = None) -> int:
+    """
+    Safely get integer configuration from environment variable with validation.
+    """
+    value = os.getenv(env_var, str(default))
+    try:
+        result = int(value)
+        if min_value is not None and result < min_value:
+            print(f"ERROR: {env_var} value {result} is below minimum {min_value}")
+            sys.exit(1)
+        return result
+    except ValueError:
+        print(f"ERROR: Invalid integer value '{value}' for {env_var}")
+        sys.exit(1)
+
+
+def _get_log_level(env_var: str, default: str = "INFO") -> str:
+    """
+    Safely get log level from environment variable with validation.
+    """
+    value = os.getenv(env_var, default).upper()
+    if value not in VALID_LOG_LEVELS:
+        print(f"ERROR: Invalid log level '{value}' for {env_var}. ")
+        print(f"Valid levels: {', '.join(sorted(VALID_LOG_LEVELS))}")
+        sys.exit(1)
+    return value
 
 
 class Config:
-    # Whether to write data to file. Expected values are "true" or "false".
-    # Default is "False".
-    KASA_COLLECTOR_WRITE_TO_FILE = (
-        os.getenv("KASA_COLLECTOR_WRITE_TO_FILE", "False").lower() == "true"
+    """Configuration settings for Kasa Collector loaded from environment variables."""
+
+    # File output settings
+    KASA_COLLECTOR_WRITE_TO_FILE = _get_bool_config(
+        "KASA_COLLECTOR_WRITE_TO_FILE", default=False
     )
 
     # Directory where output files will be saved. Default is "output".
     KASA_COLLECTOR_OUTPUT_DIR = os.getenv("KASA_COLLECTOR_OUTPUT_DIR", "output")
 
-    # Maximum number of retries for fetching data from devices (emeter and sysinfo). Default is 5.
-    KASA_COLLECTOR_FETCH_MAX_RETRIES = int(
-        os.getenv("KASA_COLLECTOR_FETCH_MAX_RETRIES", "5")
+    # Retry and timeout settings
+    KASA_COLLECTOR_FETCH_MAX_RETRIES = _get_int_config(
+        "KASA_COLLECTOR_FETCH_MAX_RETRIES", default=5, min_value=1
     )
 
-    # Delay in seconds between fetch retries. Default is 1 second.
-    KASA_COLLECTOR_FETCH_RETRY_DELAY = int(
-        os.getenv("KASA_COLLECTOR_FETCH_RETRY_DELAY", "1")
+    KASA_COLLECTOR_FETCH_RETRY_DELAY = _get_int_config(
+        "KASA_COLLECTOR_FETCH_RETRY_DELAY", default=1, min_value=1
     )
 
-    # Interval in seconds between device discovery runs. Default is 300 seconds (5 minutes).
-    KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL = int(
-        os.getenv("KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL", "300")
+    # Discovery settings
+    KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL = _get_int_config(
+        "KASA_COLLECTOR_DEVICE_DISCOVERY_INTERVAL", default=300, min_value=1
     )
 
-    # Timeout in seconds for device discovery. Default is 5 seconds.
-    KASA_COLLECTOR_DISCOVERY_TIMEOUT = int(
-        os.getenv("KASA_COLLECTOR_DISCOVERY_TIMEOUT", "5")
+    KASA_COLLECTOR_DISCOVERY_TIMEOUT = _get_int_config(
+        "KASA_COLLECTOR_DISCOVERY_TIMEOUT", default=5, min_value=1
     )
 
-    # Number of discovery packets to send. Default is 3.
-    KASA_COLLECTOR_DISCOVERY_PACKETS = int(
-        os.getenv("KASA_COLLECTOR_DISCOVERY_PACKETS", "3")
+    KASA_COLLECTOR_DISCOVERY_PACKETS = _get_int_config(
+        "KASA_COLLECTOR_DISCOVERY_PACKETS", default=3, min_value=1
     )
 
-    # Interval in seconds between data fetch runs. Default is 15 seconds.
-    KASA_COLLECTOR_DATA_FETCH_INTERVAL = int(
-        os.getenv("KASA_COLLECTOR_DATA_FETCH_INTERVAL", "15")
+    # Data collection intervals
+    KASA_COLLECTOR_DATA_FETCH_INTERVAL = _get_int_config(
+        "KASA_COLLECTOR_DATA_FETCH_INTERVAL", default=15, min_value=1
     )
 
-    # Interval in seconds between system information fetch runs. Default is 60 seconds.
-    KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL = int(
-        os.getenv("KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL", "60")
+    KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL = _get_int_config(
+        "KASA_COLLECTOR_SYSINFO_FETCH_INTERVAL", default=60, min_value=1
     )
 
-    # Whether to keep missing devices in the list. Expected values are "true" or "false".
-    # Default is "True".
-    KASA_COLLECTOR_KEEP_MISSING_DEVICES = (
-        os.getenv("KASA_COLLECTOR_KEEP_MISSING_DEVICES", "True").lower() == "true"
+    # Device management
+    KASA_COLLECTOR_KEEP_MISSING_DEVICES = _get_bool_config(
+        "KASA_COLLECTOR_KEEP_MISSING_DEVICES", default=True
     )
 
     # URL for the InfluxDB instance.
@@ -64,37 +105,66 @@ class Config:
     # Bucket name for storing data in InfluxDB.
     KASA_COLLECTOR_INFLUXDB_BUCKET = os.getenv("KASA_COLLECTOR_INFLUXDB_BUCKET")
 
-    # Log level for the KasaAPI module. Default is "INFO".
-    KASA_COLLECTOR_LOG_LEVEL_KASA_API = os.getenv(
-        "KASA_COLLECTOR_LOG_LEVEL_KASA_API", "INFO"
-    ).upper()
+    # InfluxDB write options
+    KASA_COLLECTOR_INFLUXDB_BATCH_SIZE = _get_int_config(
+        "KASA_COLLECTOR_INFLUXDB_BATCH_SIZE", default=1, min_value=1
+    )
 
-    # Log level for the InfluxDBStorage module. Default is "INFO".
-    KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE = os.getenv(
-        "KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE", "INFO"
-    ).upper()
+    KASA_COLLECTOR_INFLUXDB_FLUSH_INTERVAL = _get_int_config(
+        "KASA_COLLECTOR_INFLUXDB_FLUSH_INTERVAL", default=10, min_value=1
+    )
 
-    # Log level for the KasaCollector module. Default is "INFO".
-    KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR = os.getenv(
-        "KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR", "INFO"
-    ).upper()
+    # Logging configuration
+    KASA_COLLECTOR_LOG_LEVEL_KASA_API = _get_log_level(
+        "KASA_COLLECTOR_LOG_LEVEL_KASA_API", default="INFO"
+    )
 
-    # Comma-separated list of device hosts (IPs) for manual configuration. Default is None.
+    KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE = _get_log_level(
+        "KASA_COLLECTOR_LOG_LEVEL_INFLUXDB_STORAGE", default="INFO"
+    )
+
+    KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR = _get_log_level(
+        "KASA_COLLECTOR_LOG_LEVEL_KASA_COLLECTOR", default="INFO"
+    )
+
+    # Comma-separated list of device hosts (IPs) for manual configuration.
     KASA_COLLECTOR_DEVICE_HOSTS = os.getenv("KASA_COLLECTOR_DEVICE_HOSTS", None)
 
     # TP-Link account credentials for devices that require login. Default is None.
     KASA_COLLECTOR_TPLINK_USERNAME = os.getenv("KASA_COLLECTOR_TPLINK_USERNAME", None)
     KASA_COLLECTOR_TPLINK_PASSWORD = os.getenv("KASA_COLLECTOR_TPLINK_PASSWORD", None)
 
-    # Flag to enable/disable auto-discovery. Default is True.
-    KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY = (
-        os.getenv("KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY", "True").lower() == "true"
+    KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY = _get_bool_config(
+        "KASA_COLLECTOR_ENABLE_AUTO_DISCOVERY", default=True
     )
 
-    # Maximum number of retries for device authentication. Default is 3.
-    KASA_COLLECTOR_AUTH_MAX_RETRIES = int(
-        os.getenv("KASA_COLLECTOR_AUTH_MAX_RETRIES", "3")
+    # Authentication settings
+    KASA_COLLECTOR_AUTH_MAX_RETRIES = _get_int_config(
+        "KASA_COLLECTOR_AUTH_MAX_RETRIES", default=3, min_value=1
     )
 
-    # Timeout in seconds for device authentication. Default is 10 seconds.
-    KASA_COLLECTOR_AUTH_TIMEOUT = int(os.getenv("KASA_COLLECTOR_AUTH_TIMEOUT", "10"))
+    KASA_COLLECTOR_AUTH_TIMEOUT = _get_int_config(
+        "KASA_COLLECTOR_AUTH_TIMEOUT", default=10, min_value=1
+    )
+
+    # Operational timeouts
+    KASA_COLLECTOR_TRANSPORT_CLEANUP_TIMEOUT = _get_int_config(
+        "KASA_COLLECTOR_TRANSPORT_CLEANUP_TIMEOUT", default=5, min_value=1
+    )
+
+    KASA_COLLECTOR_SHUTDOWN_TIMEOUT = _get_int_config(
+        "KASA_COLLECTOR_SHUTDOWN_TIMEOUT", default=10, min_value=1
+    )
+
+    KASA_COLLECTOR_DNS_CACHE_TTL = _get_int_config(
+        "KASA_COLLECTOR_DNS_CACHE_TTL", default=300, min_value=0
+    )
+
+    KASA_COLLECTOR_MAX_RETRY_DELAY = _get_int_config(
+        "KASA_COLLECTOR_MAX_RETRY_DELAY", default=60, min_value=1
+    )
+
+    # Health check settings
+    KASA_COLLECTOR_HEALTH_CHECK_MAX_AGE = _get_int_config(
+        "KASA_COLLECTOR_HEALTH_CHECK_MAX_AGE", default=120, min_value=1
+    )
