@@ -8,20 +8,23 @@ A live set of dashboards using this Collector [are available here](https://labs.
 
 ## Quick Start
 
-```bash
-# Clone the repository
-git clone https://github.com/lux4rd0/kasa-collector.git
-cd kasa-collector
-
-# Configure environment variables (see wiki for details)
-# Edit compose.yaml or create a .env file with:
-# - KASA_COLLECTOR_INFLUXDB_URL
-# - KASA_COLLECTOR_INFLUXDB_TOKEN
-# - KASA_COLLECTOR_INFLUXDB_ORG
-# - KASA_COLLECTOR_INFLUXDB_BUCKET
-
-# Deploy
-docker compose up -d
+```yaml
+services:
+  kasa-collector:
+    image: lux4rd0/kasa-collector:latest
+    container_name: kasa-collector
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      # Required - InfluxDB Configuration
+      KASA_COLLECTOR_INFLUXDB_URL: http://influxdb:8086
+      KASA_COLLECTOR_INFLUXDB_TOKEN: your-token-here
+      KASA_COLLECTOR_INFLUXDB_ORG: your-org
+      KASA_COLLECTOR_INFLUXDB_BUCKET: kasa
+      
+      # Optional - For newer devices requiring authentication
+      # KASA_COLLECTOR_TPLINK_USERNAME: your-email@example.com
+      # KASA_COLLECTOR_TPLINK_PASSWORD: your-password
 ```
 
 ## Documentation
