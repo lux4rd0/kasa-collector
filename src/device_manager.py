@@ -37,7 +37,11 @@ class DeviceManager:
         Initialize manual devices based on IPs or hostnames in the config.
         Fetch and authenticate devices manually specified in the config.
         """
-        for ip in self.device_hosts:
+        if not self.device_hosts:
+            return
+            
+        async def add_manual_device(ip):
+            """Add a single manual device."""
             try:
                 device = await KasaAPI.get_device(
                     ip, self.tplink_username, self.tplink_password
@@ -53,6 +57,11 @@ class DeviceManager:
                 )
             except Exception as e:
                 self.logger.error(f"Failed to add manual device {ip}: {e}")
+        
+        # Process all manual devices in parallel
+        async with asyncio.TaskGroup() as tg:
+            for ip in self.device_hosts:
+                tg.create_task(add_manual_device(ip))
 
     async def discover_devices(self):
         """

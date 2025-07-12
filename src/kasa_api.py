@@ -142,8 +142,28 @@ class KasaAPI:
             raise
 
         device = None
+        
+        # First try discover_single for better cross-subnet compatibility
+        # This properly detects device type and protocol
         try:
-            # Build device configuration
+            logger.debug(f"Attempting discover_single for {ip}")
+            device = await Discover.discover_single(
+                ip,
+                credentials=Credentials(username=username, password=password) if username and password else None
+            )
+            if device:
+                await device.update()
+                logger.debug(
+                    f"Connected to device via discovery: "
+                    f"{device.alias if device.alias else device.model} (IP: {ip})"
+                )
+                return device
+        except Exception as discover_error:
+            logger.debug(f"discover_single failed for {ip}: {discover_error}")
+            # Fall through to try Device.connect
+        
+        try:
+            # Fallback to direct connection if discovery fails
             if username and password:
                 # Create config with credentials for authenticated devices
                 credentials = Credentials(username=username, password=password)
@@ -161,11 +181,15 @@ class KasaAPI:
                 except Exception as auth_error:
                     logger.warning(f"Failed to connect with credentials: {auth_error}")
                     # Try without credentials as fallback
-                    device = await Device.connect(host=ip)
-                    logger.debug(
-                        f"Connected to device without authentication: "
-                        f"{device.alias if device.alias else device.model} (IP: {ip})"
-                    )
+                    try:
+                        device = await Device.connect(host=ip)
+                        logger.debug(
+                            f"Connected to device without authentication: "
+                            f"{device.alias if device.alias else device.model} (IP: {ip})"
+                        )
+                    except Exception as fallback_error:
+                        logger.error(f"Failed to connect without credentials: {fallback_error}")
+                        raise
             else:
                 # Connect without credentials for devices without authentication
                 device = await Device.connect(host=ip)
